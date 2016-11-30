@@ -354,28 +354,16 @@ p = min( p, dble(Pr) )
 !!! s54=lagrangefxn(p,s5array)
 ! SRINI2: DELETED ALL SRINI1 code BELOW and replaced with this array code
 
-sp=lagrangefxn(p,meatable%scrp(  (k-Pr+1):(k-Pr+Np), it, jt, kt))
-s0 =lagrangefxn(p,meatable%scr0( (k-Pr+1):(k-Pr+Np), it, jt, kt))
-s1 =lagrangefxn(p,meatable%scr1( (k-Pr+1):(k-Pr+Np), it, jt, kt))
-s2 =lagrangefxn(p,meatable%scr2( (k-Pr+1):(k-Pr+Np), it, jt, kt))
-s3 =lagrangefxn(p,meatable%scr3( (k-Pr+1):(k-Pr+Np), it, jt, kt))
-s54=lagrangefxn(p,meatable%scr54((k-Pr+1):(k-Pr+Np), it, jt, kt))
+sParArray(1) =lagrangefxn(p,meatable%scrp( (k-Pr+1):(k-Pr+Np), it, jt, kt))
+sParArray(2) =lagrangefxn(p,meatable%scr0( (k-Pr+1):(k-Pr+Np), it, jt, kt))
+sParArray(3) =lagrangefxn(p,meatable%scr1( (k-Pr+1):(k-Pr+Np), it, jt, kt))
+sParArray(4) =lagrangefxn(p,meatable%scr2( (k-Pr+1):(k-Pr+Np), it, jt, kt))
+sParArray(5) =lagrangefxn(p,meatable%scr3( (k-Pr+1):(k-Pr+Np), it, jt, kt))
+sParArray(6) =lagrangefxn(p,meatable%scr54((k-Pr+1):(k-Pr+Np), it, jt, kt))
 
-
-sp = min(1.0_cd, max( 0.0_cd , sp))
-s0 = min(1.0_cd, max( 0.0_cd , s0))
-s1 = min(1.0_cd, max( 0.0_cd , s1))
-s2 = min(1.0_cd, max( 0.0_cd , s2))
-s3 = min(1.0_cd, max( 0.0_cd , s3))
-s54= min(1.0_cd, max( 0.0_cd , s54))             !31 seconds  end
-
-
-sParArray(1) = sp 
-sParArray(2) = s0
-sParArray(3) = s1
-sParArray(4) = s2
-sParArray(5) = s3
-sParArray(6) = s54
+do i = 1,6
+  sParArray(i) = min(1.0_cd, max( 0.0_cd, sParArray(i)))
+end do
 
 return
 end subroutine get_s
