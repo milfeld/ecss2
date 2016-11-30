@@ -173,7 +173,6 @@ implicit none
 integer(c_int), parameter                    :: n = 4
 real(c_double), intent(in)                   :: p
 real(c_double), intent(in), dimension(1:n)   :: yd
-real(c_double)                               :: c1,c2,c3,c4
 real(c_double)                               :: pm1,pp1,pm2
 ! real(c_double)                               :: lazy
 ! integer(c_int)                               :: j
@@ -198,6 +197,24 @@ pp1=p+1.0_cd; pm1=p-1.0_cd; pm2=p-2.0_cd
 
 return
 end function lagrangefxn
+
+
+real(c_double) function lagrangefxn6(    pm1,pm2,p,pp1, p05,p16, yd1,yd2,yd3,yd4, i)
+!$omp declare simd(lagrangefxn6) uniform(pm1,pm2,p,pp1, p05,p16, yd1,yd2,yd3,yd4) &
+!$omp&                           linear(i:1)
+implicit none
+
+   real(8), intent(in),dimension(6)      :: yd1, yd2, yd3, yd4
+   real(8), intent(in)                   :: pm1,pm2,p,pp1, p05,p16
+   integer(c_int)                        :: i
+   real(8)                               :: t1,t2
+
+    t1= yd4(i)*pp1 - yd1(i)*pm2
+    t2= yd2(i)*pm1 - yd3(i)*p
+    lagrangefxn6= t1*p16 + t2*p05
+
+   return
+end function
 
 !-------------------------------------------------------------------------------
 !
@@ -275,14 +292,19 @@ integer(c_int), intent(in)          :: it,jt,kt
 type(model_parameters), pointer, intent(in) :: meatable
 real(c_double),dimension(6),intent(out):: sParArray
 
-real(c_double)                      :: sp,s0,s1,s2,s3,s54
+!!!real(c_double)                      :: sp,s0,s1,s2,s3,s54
 real(c_double)                      :: p
 ! integer(c_int)                      :: k, ctr, in1
 integer(c_int)                      :: k
 integer(c_int), parameter           :: Np=4
 integer(c_int), parameter           :: Pr=Np/2
-real(c_double),dimension(1:Np)      :: sparray,s0array,s1array
-real(c_double),dimension(1:Np)      :: s2array,s3array,s5array
+!!!real(c_double),dimension(1:Np)      :: sparray,s0array,s1array
+!!!real(c_double),dimension(1:Np)      :: s2array,s3array,s5array
+
+! Kent
+real(c_double)                      :: t(6,4)
+real(c_double)                      :: pp1, pm1, pm2, p05, p16
+integer                             :: i
 
 ! SRINI
 real(c_double)                      :: ctabmax
@@ -354,16 +376,25 @@ p = min( p, dble(Pr) )
 !!! s54=lagrangefxn(p,s5array)
 ! SRINI2: DELETED ALL SRINI1 code BELOW and replaced with this array code
 
-sParArray(1) =lagrangefxn(p,meatable%scrp( (k-Pr+1):(k-Pr+Np), it, jt, kt))
-sParArray(2) =lagrangefxn(p,meatable%scr0( (k-Pr+1):(k-Pr+Np), it, jt, kt))
-sParArray(3) =lagrangefxn(p,meatable%scr1( (k-Pr+1):(k-Pr+Np), it, jt, kt))
-sParArray(4) =lagrangefxn(p,meatable%scr2( (k-Pr+1):(k-Pr+Np), it, jt, kt))
-sParArray(5) =lagrangefxn(p,meatable%scr3( (k-Pr+1):(k-Pr+Np), it, jt, kt))
-sParArray(6) =lagrangefxn(p,meatable%scr54((k-Pr+1):(k-Pr+Np), it, jt, kt))
+   pp1=p+1.0_cd; pm1=p-1.0_cd; pm2=p-2.0_cd
+   p16=0.166666667_cd * pm1 * p
+   p05=0.5_cd         * pm2 * pp1
 
-do i = 1,6
-  sParArray(i) = min(1.0_cd, max( 0.0_cd, sParArray(i)))
-end do
+   t(1,1:4) =meatable%scrp(  (k+pr):(k+pr+4), it, jt, kt )
+   t(2,1:4) =meatable%scr0(  (k+pr):(k+pr+4), it, jt, kt )
+   t(3,1:4) =meatable%scr1(  (k+pr):(k+pr+4), it, jt, kt )
+   t(4,1:4) =meatable%scr2(  (k+pr):(k+pr+4), it, jt, kt )
+   t(5,1:4) =meatable%scr3(  (k+pr):(k+pr+4), it, jt, kt )
+   t(6,1:4) =meatable%scr54( (k+pr):(k+pr+4), it, jt, kt )
+
+   !$omp simd 
+   do i = 1,6
+      sParArray(i) =lagrangefxn6(pm1,pm2,p,pp1, p05,p16, t(1,1),t(1,2),t(1,3),t(1,4), i)
+   end do
+ 
+   do i = 1,6
+      sParArray(i) = min(1.0_cd, max( 0.0_cd, sParArray(i)))
+   end do
 
 return
 end subroutine get_s
