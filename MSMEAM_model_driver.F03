@@ -338,21 +338,24 @@ p = p - dble( k )
 
 p = min( p, dble(Pr) )
       
+if( 1 == 1) then
 ! SRINI2: DELETED ALL SRINI1 code BELOW and replaced with this array code
-!!! sparray(:)=meatable%scrp( (k-Pr+1):(k-Pr+Np), it, jt, kt)
-!!! s0array(:)=meatable%scr0( (k-Pr+1):(k-Pr+Np), it, jt, kt)
-!!! s1array(:)=meatable%scr1( (k-Pr+1):(k-Pr+Np), it, jt, kt)
-!!! s2array(:)=meatable%scr2( (k-Pr+1):(k-Pr+Np), it, jt, kt)
-!!! s3array(:)=meatable%scr3( (k-Pr+1):(k-Pr+Np), it, jt, kt)
-!!! s5array(:)=meatable%scr54((k-Pr+1):(k-Pr+Np), it, jt, kt)
+sparray(:)=meatable%scrp( (k-Pr+1):(k-Pr+Np), it, jt, kt)
+s0array(:)=meatable%scr0( (k-Pr+1):(k-Pr+Np), it, jt, kt)
+s1array(:)=meatable%scr1( (k-Pr+1):(k-Pr+Np), it, jt, kt)
+s2array(:)=meatable%scr2( (k-Pr+1):(k-Pr+Np), it, jt, kt)
+s3array(:)=meatable%scr3( (k-Pr+1):(k-Pr+Np), it, jt, kt)
+s5array(:)=meatable%scr54((k-Pr+1):(k-Pr+Np), it, jt, kt)
 
-!!! sp=lagrangefxn(p,sparray)                         !31 seconds start
-!!! s0=lagrangefxn(p,s0array)
-!!! s1=lagrangefxn(p,s1array)
-!!! s2=lagrangefxn(p,s2array)
-!!! s3=lagrangefxn(p,s3array)
-!!! s54=lagrangefxn(p,s5array)
+sp=lagrangefxn(p,sparray)                         !31 seconds start
+s0=lagrangefxn(p,s0array)
+s1=lagrangefxn(p,s1array)
+s2=lagrangefxn(p,s2array)
+s3=lagrangefxn(p,s3array)
+s54=lagrangefxn(p,s5array)
 ! SRINI2: DELETED ALL SRINI1 code BELOW and replaced with this array code
+
+else
 
 sp=lagrangefxn(p,meatable%scrp(  (k-Pr+1):(k-Pr+Np), it, jt, kt))
 s0 =lagrangefxn(p,meatable%scr0( (k-Pr+1):(k-Pr+Np), it, jt, kt))
@@ -369,6 +372,7 @@ s2 = min(1.0_cd, max( 0.0_cd , s2))
 s3 = min(1.0_cd, max( 0.0_cd , s3))
 s54= min(1.0_cd, max( 0.0_cd , s54))             !31 seconds  end
 
+endif
 
 sParArray(1) = sp 
 sParArray(2) = s0
