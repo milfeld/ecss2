@@ -1037,8 +1037,10 @@ real(c_double)           :: angular1,angular2
 real(c_double)           :: dfrho,phiif,phiij
 real(c_double)           :: rcosj,rcosm,rcosl,rcoss,rcosk,rcosw
 real(c_double)           :: rml,rmls,rmlsk,rmlskw
-real(c_double),dimension(1:3,1:3) :: rcosmls
 real(c_double)           :: drmllm,drmlsslm,drmlskkslm,drmlskwwkslm
+real(c_double)           ::  rlm(  3,3),    rslm(  3,3,3),    rkslm(  3,3,3,3),    rwkslm(  3,3,3,3,3)
+real(c_double)           :: drlmkk(3,3,3), drslmkk(3,3,3,3), drkslmkk(3,3,3,3,3), drwkslmkk(3,3,3,3,3,3)
+!real(c_double)           :: tmp_lm, tmp_slm, tmp_kslm, tmp_wkslm
 real(c_double)           :: drho0,drho0s
 real(c_double)           :: drho1,drho1g,drho1gh
 real(c_double)           :: drho1s,drho1sg,drho1sgh
@@ -1316,6 +1318,8 @@ do i = 1,N
    dhm(1:3,1:3,1:3)         = 0.0_cd
    gp(1:3,1:3,1:3,1:3,1:3)  = 0.0_cd
    gm(1:3,1:3,1:3,1:3,1:3)  = 0.0_cd
+   gp2(1:3,1:3,1:3,1:3,1:3) = 0.0_cd
+   gm2(1:3,1:3,1:3,1:3,1:3) = 0.0_cd
 
    ier = kim_api_get_neigh(pkim,1,i,part_ret,numnei,pnei1atom,pRij_list)
    if (ier.ne.KIM_STATUS_OK) then
@@ -1850,13 +1854,6 @@ do i = 1,N
          r1 = 1.0_cd / r_ij
          rcos(:)= r1 * Rij(:)
 
-         do m=1,3; do l=1,3; do s=1,3
-         rmls = rcos(s)*rcos(l)*rcos(m)
-         do k=1,3; do w=1,3
-               rcosmls(w,k) =rmls* rcos(w)*rcos(k)
-         enddo; enddo
-         enddo; enddo; enddo
-
          do m=1,3
             t1    =rcos(m)
             ap(m) =ap(m)+rhjp(1)*t1*screeArray(3)
@@ -2073,6 +2070,47 @@ do i = 1,N
 	 ! SRINI: ADDED a new argument pINDX
 	 pINDX = r_ij*rtabscle + 1.0_cd
 
+!!!!! Kent  rcos terms
+
+   !!   do m = 1,3
+   !!   do l = 1,3
+   !!                  tmp_lm = rcos(l)*     rcos(m);     rlm(     l,m)  =    tmp_lm
+   !!   do s = 1,3
+   !!                 tmp_slm = rcos(s)*     tmp_lm;     rslm(    s,l,m) =   tmp_slm
+   !!   do k = 1,3
+   !!                tmp_kslm = rcos(k)*    tmp_slm;    rkslm(  k,s,l,m) =  tmp_kslm
+   !!   do w = 1,3
+   !!               tmp_wkslm = rcos(w)*   tmp_kslm;   rwkslm(w,k,s,l,m) = tmp_wkslm
+   !!   end do; end do; end do; end do; end do;
+!or
+        do m = 1,3
+        do l = 1,3
+                     rlm(     l,m)     = rcos(l)*    rcos(    m)
+        do s = 1,3
+                     rslm(    s,l,m)   = rcos(s)*   rlm(    l,m)
+        do k = 1,3
+                     rkslm(  k,s,l,m)  = rcos(k)*  rslm(  s,l,m)
+        do w = 1,3
+                     rwkslm(w,k,s,l,m) = rcos(w)* rkslm(k,s,l,m)
+        end do; end do; end do; end do; end do;
+
+!!!!!
+
+!!!!! Kent  Derivative terms
+
+        do kk=1,3  
+        do  m=1,3
+        do  l=1,3
+                   drlmkk(         l,m,kk)=   drcos(      m,kk) * rcos(l) + rcos(       m) * drcos(l,kk)
+        do  s=1,3
+                   drslmkk(      s,l,m,kk)=  drlmkk(    l,m,kk) * rcos(s) + rml(      l,m) * drcos(s,kk)
+        do  k=1,3
+                   drkslmkk(   k,s,l,m,kk)= drslmkk(  s,l,m,kk) * rcos(k) + rmls(   s,l,m) * drcos(k,kk)
+        do  w=1,3
+                   drwkslmkk(w,k,s,l,m,kk)=drkslmkk(k,s,l,m,kk) * rcos(w) + rmlsk(k,s,l,m) * drcos(w,kk)
+        enddo; enddo; enddo; enddo; enddo; enddo; 
+!!!!!
+
          phiif=dphif(r_ij,ity,jty,meatable, pINDX)
 
          !
@@ -2207,34 +2245,32 @@ do i = 1,N
                      drho3sh = drho3sh + tmp3hp * rhjp(4) * rmls &
                                        - tmp3hm * rhjm(4) * rmls
 
-                     do k = 1 , 3     ! do k
-                        rcosk = rcos(k)
-                        rmlsk = rmls * rcosk
-                        drmlskkslm = drmlsslm * rcosk + rmls * drcos(k,kk)
 
-                        do w = 1, 3    ! do w
-                           rcosw = rcos(w)
-                           rmlskw = rmlsk * rcosw
-                           drmlskwwkslm = drmlskkslm * rcosw + rmlsk * drcos(w,kk)
+                     !$omp SIMD collapse(2) reduction(+:drho5) reduction(+drho5s)
+                     do k = 1, 3    ! do k
+                     do w = 1, 3    ! do w
 
-                           tmp5p = 2.0_cd * gp(w,k,s,l,m)
-                           tmp5m = 2.0_cd * gm(w,k,s,l,m)
+                           tmp5p = gp2(w,k,s,l,m)
+                           tmp5m = gm2(w,k,s,l,m)
 
-                           drho5 = drho5 + tmp5p * (drhjp(4) * rcosj * rmlskw + rhjp(4) * drmlskwwkslm) * screeArray(6) &
-                                         - tmp5m * (drhjm(4) * rcosj * rmlskw + rhjm(4) * drmlskwwkslm) * screeArray(6)
+                          !drho5 = drho5 + tmp5p * (drhjp(4) * rcosj * rmlskw            + rhjp(4) * drmlskwwkslm())          * screeArray(6) &
+                          !              - tmp5m * (drhjm(4) * rcosj * rmlskw            + rhjm(4) * drmlskwwkslm())          * screeArray(6)
 
-			   ! GIBSON		 
-                           ! drho5s = drho5s + tmp5p * rhjp(4) * rmlskw - tmp5m * rhjm(4) * rmlskw
+                           drho5 = drho5 + tmp5p * (drhjp(4) * rcosj * rwkslm(w,k,s,l,m) + rhjp(4) * drwkslmkk(w,k,s,l,m,kk)) * screeArray(6) &
+                                         - tmp5m * (drhjm(4) * rcosj * rwkslm(w,k,s,l,m) + rhjm(4) * drwkslmkk(w,k,s,l,m,kk)) * screeArray(6)
 
-			   ! SRINI
-                           drho5s = drho5s + ((tmp5p * rhjp(4)) - (tmp5m * rhjm(4))) * rmlskw  !!3.5
+                          !drho5s = drho5s + ((tmp5p * rhjp(4)) - (tmp5m * rhjm(4))) * rmlskw  !!3.5
 
-                        enddo     !do w
+                           drho5s = drho5s + ((tmp5p * rhjp(4)) - (tmp5m * rhjm(4))) * rwkslm(w,k,s,l,m)
+
+                     enddo     !do w
                      enddo     !do k
+
+
                   enddo     ! do s
                enddo     ! do l
             enddo     ! do m
-
+                    ! do kk
             !
             !     Compile forces for i -> j and j -> i
             !
@@ -2430,23 +2466,21 @@ do i = 1,N
                      drho2s= drho2s + ((tmp2p*rhjp(2))- (tmp2m*rhjm(2)))*rml
 
                      do s = 1,3    ! do s
-                        rcoss = rcos(s)
-                        rmls = rml * rcoss
                         tmp3p = 2.0_cd * dp(s,l,m)
                         tmp3m = 2.0_cd * dm(s,l,m)
                         tmp3hp = 2.0_cd * dhp(s,l,m)
                         tmp3hm = 2.0_cd * dhm(s,l,m)
 
 			! SRINI
-                        drho3s = drho3s + ((tmp3p*rhjp(3))- (tmp3m *rhjm(3)))*rmls     !!4.74
-                        drho3sh= drho3sh+ ((tmp3hp*rhjp(4))-(tmp3hm*rhjm(4)))*rmls     !!3.39
+                        drho3s = drho3s + ((tmp3p*rhjp(3))- (tmp3m *rhjm(3)))*rslm(s,l,m)     !!4.74
+                        drho3sh= drho3sh+ ((tmp3hp*rhjp(4))-(tmp3hm*rhjm(4)))*rslm(s,l,m)     !!3.39
 
                         ! https://software.intel.com/en-us/forums/intel-fortran-compiler-for-linux-and-mac-os-x/topic/509157
                         !$omp SIMD collapse(2) reduction(+:drho5s)
                         do k = 1,3    ! do k
                            do w = 1,3    ! do w
 			      ! SRINI
-                              drho5s=drho5s+(gp2(w,k,s,l,m)*rhjp4-gm2(w,k,s,l,m)*rhjm4)*rcosmls(w,k)  !! 63.2 -->39.9
+                              drho5s=drho5s+(gp2(w,k,s,l,m)*rhjp4-gm2(w,k,s,l,m)*rhjm4)*rwkslm(w,k,s,l,m)  !! 63.2 -->39.9
 
                            enddo    ! do m
                         enddo    ! do l
