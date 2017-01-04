@@ -292,19 +292,19 @@ integer(c_int), intent(in)          :: it,jt,kt
 type(model_parameters), pointer, intent(in) :: meatable
 real(c_double),dimension(6),intent(out):: sParArray
 
-!!!real(c_double)                      :: sp,s0,s1,s2,s3,s54
+real(c_double)                      :: sp,s0,s1,s2,s3,s54
 real(c_double)                      :: p
 ! integer(c_int)                      :: k, ctr, in1
 integer(c_int)                      :: k
 integer(c_int), parameter           :: Np=4
 integer(c_int), parameter           :: Pr=Np/2
-!!!real(c_double),dimension(1:Np)      :: sparray,s0array,s1array
-!!!real(c_double),dimension(1:Np)      :: s2array,s3array,s5array
+real(c_double),dimension(1:Np)      :: sparray,s0array,s1array
+real(c_double),dimension(1:Np)      :: s2array,s3array,s5array
 
 ! Kent
 real(c_double)                      :: t(6,4)
 real(c_double)                      :: pp1, pm1, pm2, p05, p16
-integer                             :: i
+integer                             :: i, ialgo
 
 ! SRINI
 real(c_double)                      :: ctabmax
@@ -359,22 +359,50 @@ p = p - dble( k )
 !
 
 p = min( p, dble(Pr) )
-      
-! SRINI2: DELETED ALL SRINI1 code BELOW and replaced with this array code
-!!! sparray(:)=meatable%scrp( (k-Pr+1):(k-Pr+Np), it, jt, kt)
-!!! s0array(:)=meatable%scr0( (k-Pr+1):(k-Pr+Np), it, jt, kt)
-!!! s1array(:)=meatable%scr1( (k-Pr+1):(k-Pr+Np), it, jt, kt)
-!!! s2array(:)=meatable%scr2( (k-Pr+1):(k-Pr+Np), it, jt, kt)
-!!! s3array(:)=meatable%scr3( (k-Pr+1):(k-Pr+Np), it, jt, kt)
-!!! s5array(:)=meatable%scr54((k-Pr+1):(k-Pr+Np), it, jt, kt)
 
-!!! sp=lagrangefxn(p,sparray)                         !31 seconds start
-!!! s0=lagrangefxn(p,s0array)
-!!! s1=lagrangefxn(p,s1array)
-!!! s2=lagrangefxn(p,s2array)
-!!! s3=lagrangefxn(p,s3array)
-!!! s54=lagrangefxn(p,s5array)
+ialgo=1      !! 1=1st, 2=2nd, 3=optimized
+if( ialgo == 1) then
 ! SRINI2: DELETED ALL SRINI1 code BELOW and replaced with this array code
+sparray(:)=meatable%scrp( (k-Pr+1):(k-Pr+Np), it, jt, kt)
+s0array(:)=meatable%scr0( (k-Pr+1):(k-Pr+Np), it, jt, kt)
+s1array(:)=meatable%scr1( (k-Pr+1):(k-Pr+Np), it, jt, kt)
+s2array(:)=meatable%scr2( (k-Pr+1):(k-Pr+Np), it, jt, kt)
+s3array(:)=meatable%scr3( (k-Pr+1):(k-Pr+Np), it, jt, kt)
+s5array(:)=meatable%scr54((k-Pr+1):(k-Pr+Np), it, jt, kt)
+
+sp=lagrangefxn(p,sparray)                         !31 seconds start
+s0=lagrangefxn(p,s0array)
+s1=lagrangefxn(p,s1array)
+s2=lagrangefxn(p,s2array)
+s3=lagrangefxn(p,s3array)
+s54=lagrangefxn(p,s5array)
+! SRINI2: DELETED ALL SRINI1 code BELOW and replaced with this array code
+
+elseif(ialgo == 2) then
+
+sp=lagrangefxn(p,meatable%scrp(  (k-Pr+1):(k-Pr+Np), it, jt, kt))
+s0 =lagrangefxn(p,meatable%scr0( (k-Pr+1):(k-Pr+Np), it, jt, kt))
+s1 =lagrangefxn(p,meatable%scr1( (k-Pr+1):(k-Pr+Np), it, jt, kt))
+s2 =lagrangefxn(p,meatable%scr2( (k-Pr+1):(k-Pr+Np), it, jt, kt))
+s3 =lagrangefxn(p,meatable%scr3( (k-Pr+1):(k-Pr+Np), it, jt, kt))
+s54=lagrangefxn(p,meatable%scr54((k-Pr+1):(k-Pr+Np), it, jt, kt))
+
+
+sp = min(1.0_cd, max( 0.0_cd , sp))
+s0 = min(1.0_cd, max( 0.0_cd , s0))
+s1 = min(1.0_cd, max( 0.0_cd , s1))
+s2 = min(1.0_cd, max( 0.0_cd , s2))
+s3 = min(1.0_cd, max( 0.0_cd , s3))
+s54= min(1.0_cd, max( 0.0_cd , s54))             !31 seconds  end
+
+sParArray(1) = sp
+sParArray(2) = s0
+sParArray(3) = s1
+sParArray(4) = s2
+sParArray(5) = s3
+sParArray(6) = s54
+
+else
 
    pp1=p+1.0_cd; pm1=p-1.0_cd; pm2=p-2.0_cd
    p16=0.166666667_cd * pm1 * p
@@ -387,6 +415,7 @@ p = min( p, dble(Pr) )
    t(5,1:4) =meatable%scr3(  (k+pr):(k+pr+4), it, jt, kt )
    t(6,1:4) =meatable%scr54( (k+pr):(k+pr+4), it, jt, kt )
 
+
    !$omp simd 
    do i = 1,6
       sParArray(i) =lagrangefxn6(pm1,pm2,p,pp1, p05,p16, t(1,1),t(1,2),t(1,3),t(1,4), i)
@@ -395,6 +424,8 @@ p = min( p, dble(Pr) )
    do i = 1,6
       sParArray(i) = min(1.0_cd, max( 0.0_cd, sParArray(i)))
    end do
+
+endif
 
 return
 end subroutine get_s
@@ -1052,7 +1083,6 @@ real(c_double)           :: angular1,angular2
 real(c_double)           :: dfrho,phiif,phiij
 real(c_double)           :: rcosj,rcosm,rcosl,rcoss,rcosk,rcosw
 real(c_double)           :: rml,rmls,rmlsk,rmlskw
-real(c_double),dimension(1:3,1:3) :: rcosmls
 real(c_double)           :: drmllm,drmlsslm,drmlskkslm,drmlskwwkslm
 real(c_double)           :: drho0,drho0s
 real(c_double)           :: drho1,drho1g,drho1gh
@@ -1104,10 +1134,7 @@ real(c_double),dimension(1:3)                      :: dfij,dfim,dfji
 real(c_double),dimension(1:3,1:3)                  :: drcos,bp,bm
 real(c_double),dimension(1:3,1:3,1:3)              :: dp,dm,dhp,dhm
 real(c_double),dimension(1:3,1:3,1:3,1:3,1:3)      :: gp,gm
-real(c_double),dimension(1:3,1:3,1:3,1:3,1:3)      :: gp2,gm2
 real(c_double),dimension(0:4)                      :: rhjp,rhjm,drhjp,drhjm
-real(c_double)                                     :: rhjp4
-real(c_double)                                     :: rhjm4
 
 integer(c_int),dimension(1:neimax)                 :: jIdxOnI
 real(c_double),dimension(1:neimax)                 :: scrnabp,scrnab0,scrnab1
@@ -1859,18 +1886,9 @@ do i = 1,N
 	    ! SRINI: ADDED a new argument pINDX
             rhjm(ll)=rhof(r_ij,ll,ispin,jty,meatable, pINDX)
          enddo
-         rhjm4=rhjm(4)
-         rhjp4=rhjp(4)
 
          r1 = 1.0_cd / r_ij
          rcos(:)= r1 * Rij(:)
-
-         do m=1,3; do l=1,3; do s=1,3
-         rmls = rcos(s)*rcos(l)*rcos(m)
-         do k=1,3; do w=1,3
-               rcosmls(w,k) =rmls* rcos(w)*rcos(k)
-         enddo; enddo
-         enddo; enddo; enddo
 
          do m=1,3
             t1    =rcos(m)
@@ -1901,9 +1919,6 @@ do i = 1,N
                enddo
             enddo
          enddo
-
-         gp2=gp*2.0_cd
-         gm2=gm*2.0_cd
 
 
          cp=cp+rhjp(0)*screeArray(2)
@@ -2456,12 +2471,22 @@ do i = 1,N
                         drho3s = drho3s + ((tmp3p*rhjp(3))- (tmp3m *rhjm(3)))*rmls     !!4.74
                         drho3sh= drho3sh+ ((tmp3hp*rhjp(4))-(tmp3hm*rhjm(4)))*rmls     !!3.39
 
-                        ! https://software.intel.com/en-us/forums/intel-fortran-compiler-for-linux-and-mac-os-x/topic/509157
-                        !$omp SIMD collapse(2) reduction(+:drho5s)
-                        do k = 1,3    ! do k
-                           do w = 1,3    ! do w
-			      ! SRINI
-                              drho5s=drho5s+(gp2(w,k,s,l,m)*rhjp4-gm2(w,k,s,l,m)*rhjm4)*rcosmls(w,k)  !! 63.2 -->39.9
+                        do k = 1,3
+                           rcosk = rcos(k)
+                           rmlsk = rmls * rcosk
+
+                           do w = 1,3
+                              rcosw = rcos(w)
+                              rmlskw = rmlsk * rcosw
+                              tmp5p = 2.0_cd * gp(w,k,s,l,m)
+                              tmp5m = 2.0_cd * gm(w,k,s,l,m)
+
+                              ! GIBSON
+                              ! drho5s = drho5s + tmp5p * rhjp(4) * rmlskw &
+                              !                - tmp5m * rhjm(4) * rmlskw
+
+                              ! SRINI
+                              drho5s=drho5s+((tmp5p*rhjp(4))-(tmp5m*rhjm(4)))*rmlskw
 
                            enddo    ! do m
                         enddo    ! do l
