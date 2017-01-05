@@ -1033,7 +1033,7 @@ real(c_double)           :: angular1,angular2
 real(c_double)           :: dfrho,phiif,phiij
 real(c_double)           :: rcosj,rcosm,rcosl,rcoss,rcosk,rcosw
 real(c_double)           :: rml,rmls,rmlsk,rmlskw
-real(c_double),dimension(3:3:3:3:3) :: rwksml
+real(c_double),dimension(3,3,3,3,3) :: rwkslm
 real(c_double)           :: drmllm,drmlsslm,drmlskkslm,drmlskwwkslm
 real(c_double)           :: drho0,drho0s
 real(c_double)           :: drho1,drho1g,drho1gh
