@@ -2103,11 +2103,11 @@ do i = 1,N
         do  l=1,3
                    drlmkk(         l,m,kk)=   drcos(      m,kk) * rcos(l) + rcos(       m) * drcos(l,kk)
         do  s=1,3
-                   drslmkk(      s,l,m,kk)=  drlmkk(    l,m,kk) * rcos(s) + rml(      l,m) * drcos(s,kk)
+                   drslmkk(      s,l,m,kk)=  drlmkk(    l,m,kk) * rcos(s) + rlm(      l,m) * drcos(s,kk)
         do  k=1,3
-                   drkslmkk(   k,s,l,m,kk)= drslmkk(  s,l,m,kk) * rcos(k) + rmls(   s,l,m) * drcos(k,kk)
+                   drkslmkk(   k,s,l,m,kk)= drslmkk(  s,l,m,kk) * rcos(k) + rslm(   s,l,m) * drcos(k,kk)
         do  w=1,3
-                   drwkslmkk(w,k,s,l,m,kk)=drkslmkk(k,s,l,m,kk) * rcos(w) + rmlsk(k,s,l,m) * drcos(w,kk)
+                   drwkslmkk(w,k,s,l,m,kk)=drkslmkk(k,s,l,m,kk) * rcos(w) + rkslm(k,s,l,m) * drcos(w,kk)
         enddo; enddo; enddo; enddo; enddo; enddo; 
 !!!!!
 
@@ -2246,7 +2246,7 @@ do i = 1,N
                                        - tmp3hm * rhjm(4) * rmls
 
 
-                     !$omp SIMD collapse(2) reduction(+:drho5) reduction(+drho5s)
+                     !$omp SIMD collapse(2) reduction(+:drho5) reduction(+:drho5s)
                      do k = 1, 3    ! do k
                      do w = 1, 3    ! do w
 
