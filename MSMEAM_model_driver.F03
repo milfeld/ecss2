@@ -1033,7 +1033,7 @@ real(c_double)           :: angular1,angular2
 real(c_double)           :: dfrho,phiif,phiij
 real(c_double)           :: rcosj,rcosm,rcosl,rcoss,rcosk,rcosw
 real(c_double)           :: rml,rmls,rmlsk,rmlskw
-real(c_double),dimension(1:3,1:3) :: rcosmls
+real(c_double),dimension(3:3:3:3:3) :: rwksml
 real(c_double)           :: drmllm,drmlsslm,drmlskkslm,drmlskwwkslm
 real(c_double)           :: drho0,drho0s
 real(c_double)           :: drho1,drho1g,drho1gh
@@ -1849,7 +1849,7 @@ do i = 1,N
          do m=1,3; do l=1,3; do s=1,3
          rmls = rcos(s)*rcos(l)*rcos(m)
          do k=1,3; do w=1,3
-               rcosmls(w,k) =rmls* rcos(w)*rcos(k)
+               rwkslm(w,k,s,l,m) =rmls* rcos(w)*rcos(k)
          enddo; enddo
          enddo; enddo; enddo
 
@@ -2442,7 +2442,7 @@ do i = 1,N
                         do k = 1,3    ! do k
                            do w = 1,3    ! do w
 			      ! SRINI
-                              drho5s=drho5s+(gp2(w,k,s,l,m)*rhjp4-gm2(w,k,s,l,m)*rhjm4)*rcosmls(w,k)  !! 63.2 -->39.9
+                              drho5s=drho5s+(gp2(w,k,s,l,m)*rhjp4-gm2(w,k,s,l,m)*rhjm4)*rwkslm(w,k,s,l,m)  !! 63.2 -->39.9
 
                            enddo    ! do m
                         enddo    ! do l
